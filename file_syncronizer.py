@@ -5,25 +5,28 @@ from stat import *
 from shutil import copy2, copytree
 
 # The path you want to copy from
-src_dir = "/Users/Renchen/Documents/Work/PDFTron"
+src_dir = "D:\\PDFTron"
 src_json_name = "src_dir_tree.json"
 dest_json_name = "dest_dir_tree.json"
 # The path you want your difference file be
-dest_dir = "/Users/Renchen/Google Drive/PDFTron"
+dest_dir = "C:\\Users\\Renchen\\Google Drive\\PDFTron"
 
-ignore_list = ['/Users/Renchen/Documents/Work/PDFTron/src_dir_tree.json']
+ignore_list = ['D:\\PDFTron\\_DeveloperSandbox\\Aleksy\\node_server\\node_modules', 'D:\\PDFTron\\bin']
 
 def GetDocLists(path):
     return os.listdir(path)
 
 def CreateFileInfoJsonForDir(path):
     result = {}
+
     result['DirName'] = os.path.basename(path)
     result_tmp = {}
     result['Details']  = result_tmp
     result_tmp['Path'] = path
     result_tmp['Files'] = []
     result_tmp['SubDir'] = []
+    if path in ignore_list:
+        return result
     for file in GetDocLists(path):
         obj = {}
         if file.startswith('.'):
@@ -40,8 +43,10 @@ def CreateFileInfoJsonForDir(path):
             obj['FileName'] = file
             obj_tmp = {}
             obj['Details'] = obj_tmp
-            obj_tmp['CTime'] = time.ctime(stats.st_ctime)
-            obj_tmp['MTime'] = time.ctime(stats.st_mtime)
+            obj_tmp['CTime'] = stats.st_ctime
+            obj_tmp['MTime'] = stats.st_mtime
+            obj_tmp['CreatedTime'] = time.ctime(stats.st_ctime)
+            obj_tmp['ModifiedTime'] = time.ctime(stats.st_mtime)
             result_tmp['Files'].append(obj)
     result_tmp['NumOfItems'] = len(result_tmp['SubDir']) + len(result_tmp['Files'])
     return result
@@ -83,6 +88,15 @@ def PopulateUpdateList(src_dir, dest_dir, result_stats):
         DumpFileInfoToJson(dest_dir_stats, dest_dir, False)
     PopulateUpdateListHelper(src_dir_stats['Details'], os.path.join(src_dir, src_dir_stats['DirName']), dest_dir_stats['Details'], os.path.join(dest_dir, dest_dir_stats['DirName']), result_stats)
 
+def PopulateUpdateListWithBothJsons(src_dir, dest_dir, result_stats):
+    global src_json_name, dest_json_name
+    src_json_full_path = os.path.join(src_dir, src_json_name)
+    dest_json_full_path = os.path.join(dest_dir, dest_json_name)
+    src_dir_stats = ReadFileInfoFromJson(src_json_full_path)
+    dest_dir_stats = ReadFileInfoFromJson(dest_json_full_path)
+
+    PopulateUpdateListHelper(src_dir_stats['Details'], os.path.join(src_dir, src_dir_stats['DirName']), dest_dir_stats['Details'], os.path.join(dest_dir, dest_dir_stats['DirName']), result_stats)
+
 def PopulateUpdateListHelper(src_details, src_dir, dest_details, dest_dir, result_stats):
     src_files = src_details['Files']
     dest_files = dest_details['Files']
@@ -104,6 +118,8 @@ def PopulateUpdateListHelper(src_details, src_dir, dest_details, dest_dir, resul
 
     # For dirs
     for item in src_details['SubDir']:
+        if not item:
+            continue
         full_path = os.path.join(src_details['Path'], item['DirName'])
         cond1 = True
         cond2 = False
@@ -162,6 +178,12 @@ def CopyFilesIntoDestDirMain():
     PopulateUpdateList(src_dir, dest_dir, result_stats)
     CopyFilesIntoDestDir(result_stats, src_dir, dest_dir)
 
+def CopyFilesIntoDestDirMainWithBothJsonMain():
+    global dest_dir, src_dir
+    result_stats = []
+    PopulateUpdateListWithBothJsons(src_dir, dest_dir, result_stats)
+    CopyFilesIntoDestDir(result_stats, src_dir, dest_dir)
+
 def CreateFileJsonInfoJsonForDirMain():
     global  dest_dir, src_dir
     src_result = CreateFileInfoJsonForDir(src_dir)
@@ -180,6 +202,6 @@ def CreateFileJsonInfoForSrcDirMain():
 
 #CreateFileJsonInfoJsonForDirMain()
 #CopyFilesIntoDestDirMain()
+CopyFilesIntoDestDirMainWithBothJsonMain()
 #CreateFileJsonInfoForDestDirMain()
-CopyFilesIntoDestDirMain()
-#CreateFileJsonInfoForDestDirMain()
+#CreateFileJsonInfoForSrcDirMain()
